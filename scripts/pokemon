@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+# Define the directory and file paths
+directory=$HOME/.local/share/pokemons
+all_pokemon_names=$HOME/.local/bin/pokemon-names
+
+# Flag to determine whether to display Pokemon names or not
+no_name=0
+
+# Function to list all Pokemon names
+list_all_pokemon_names() {
+    "$all_pokemon_names"
+}
+
+# Function to display a random Pokemon
+display_random_pokemon() {
+    total_pokemons=$("$all_pokemon_names" | wc -l)
+    random_num=$((1 + RANDOM % total_pokemons))
+    pokemon_name=$("$all_pokemon_names" | sed -n "${random_num}p")
+    image_file="$directory/$pokemon_name.png"
+    if [[ "$no_name" -eq 1 ]]; then
+        display_pokemon_no_name "$image_file"
+    else
+        display_pokemon "$image_file"
+    fi
+}
+
+# Function to display a specific Pokemon
+display_specific_pokemon() {
+    local pokemon_name="$1"
+    local image_file="$directory/${pokemon_name}.png"
+    if [ -f "$image_file" ]; then
+        if [[ "$no_name" -eq 1 ]]; then
+            display_pokemon_no_name "$image_file"
+        else
+            display_pokemon "$image_file"
+        fi
+    else
+        echo "Error: Pokemon with the name $pokemon_name not found."
+    fi
+}
+
+# Function to display Pokemon name along with the image
+display_pokemon() {
+    local image_file="$1"
+    # Using kitty to display the image
+    kitty +kitten icat --align left "$image_file"
+    echo -e "\t" "$(basename "${image_file%.*}")"
+}
+
+# Function to display Pokemon without the name
+display_pokemon_no_name() {
+    local image_file="$1"
+    # Using kitty to display the image without the name
+    kitty +kitten icat --align left "$image_file"
+}
+
+# Display help options if no arguments are provided
+if [[ $# -eq 0 ]]; then
+    echo "Usage: $(basename "$0") [options]"
+    echo "Options:"
+    echo "-l, --list         List all Pokemon names."
+    echo "-r, --random       Display a random Pokemon."
+    echo "-n, --name         Display the Pokemon with the provided name."
+    echo "    --no-name      Display the Pokemon without the name."
+    echo "-h, --help         Display this help message."
+    exit 0
+fi
+
+# Loop through arguments to check for the --no-name flag
+for arg in "$@"; do
+    case $arg in
+    "--no-name") 
+        no_name=1
+        ;;
+    esac
+done
+
+# Main loop to process other options
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+    "-l" | "--list") 
+        list_all_pokemon_names 
+        ;;
+    "-r" | "--random") 
+        display_random_pokemon 
+        ;;
+    "-n" | "--name")
+        if [[ -n "$2" ]]; then
+            display_specific_pokemon "$2"
+            shift
+        else
+            echo "Error: Pokemon name not provided."
+        fi
+        ;;
+    "--no-name") 
+        no_name=1
+        ;;
+    "-h" | "--help")
+        echo "Usage: $(basename "$0") [options]"
+        echo "Options:"
+        echo "-l, --list         List all Pokemon names."
+        echo "-r, --random       Display a random Pokemon."
+        echo "-n, --name         Display the Pokemon with the provided name."
+        echo "    --no-name      Display the Pokemon without the name."
+        echo "-h, --help         Display this help message."
+        exit 0
+        ;;
+    *) 
+        echo "Error: Unknown option $1" 
+        ;;
+    esac
+    shift
+done
+
