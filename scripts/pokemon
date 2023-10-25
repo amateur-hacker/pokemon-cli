@@ -51,8 +51,6 @@ display_pokemon() {
     
     # Using kitty to display the image
     kitty +kitten icat --align left "$tmp_image_file"
-    
-
 }
 
 # Function to display help options
