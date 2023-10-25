@@ -16,7 +16,7 @@ list_all_pokemon_names() {
 
 # Function to display a random Pokemon
 display_random_pokemon() {
-    total_pokemons=$(wc -l < "$all_pokemon_names")
+    total_pokemons=$("$all_pokemon_names" | wc -l)
     random_num=$((1 + RANDOM % total_pokemons))
     pokemon_name=$(sed -n "${random_num}p" < "$all_pokemon_names")
     image_file="$directory/$pokemon_name.png"
