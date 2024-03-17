@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+
+# Define the directory and file paths
+directory=$HOME/.local/share/pokemons
+all_pokemon_names=$HOME/.local/bin/pokemon-names
+
+# Variables for controlling the display of Pokemon names, default image size, and the currently processed option
+no_name=0
+size="300x300"
+option=""
+
+# Function to list all Pokemon names
+list_all_pokemon_names() {
+    "$all_pokemon_names"
+}
+
+# Function to display a random Pokemon
+display_random_pokemon() {
+    total_pokemons=$("$all_pokemon_names" | wc -l)
+    random_num=$((1 + RANDOM % total_pokemons))
+    pokemon_name=$(sed -n "${random_num}p" < "$all_pokemon_names")
+    image_file="$directory/$pokemon_name.png"
+    display_pokemon "$image_file"
+}
+
+# Function to display a specific Pokemon
+display_specific_pokemon() {
+    local pokemon_name="$1"
+    local image_file="$directory/${pokemon_name}.png"
+    if [[ -f "$image_file" ]]; then
+        display_pokemon "$image_file"
+    else
+        echo "Error: Pokemon with the name $pokemon_name not found."
+    fi
+}
+
+# Function to display Pokemon name along with the image
+display_pokemon() {
+    local image_file="$1"
+    local tmp_image_file=/tmp/resized_pokemon.png
+    if [[ "$no_name" != 1 ]]; then
+      echo -e "$(basename "${image_file%.*}")"
+    fi
+
+    # Using convert to resize the image
+    if [[ -z "$size" ]]; then
+      convert "$image_file" -resize "50x50" "$tmp_image_file"
+    else
+      convert "$image_file" -resize "$size" "$tmp_image_file"
+    fi
+    
+    # Using kitty to display the image
+    kitty +kitten icat --align left "$tmp_image_file"
+}
+
+# Function to display help options
+help() {
+    echo "Usage: $(basename "$0") [options]"
+    echo "Options:"
+    echo "-l, --list          List all Pokemon names."
+    echo "-r, --random        Display a random Pokemon."
+    echo "-n, --name \"pokemon_name\"   Display the Pokemon with the provided name."
+    echo "-s, --size \"wxh\"   Display the Pokemon with the provided size. (Default: 350x350)"
+    echo "    --no-name       Display the Pokemon without the name."
+    echo "-h, --help          Display this help message."
+}
+
+# Check if terminal is supported for images or not
+if [[ $KITTY_WINDOW_ID ]]; then
+  # Display help options if no arguments are provided
+  if [[ "$#" -eq 0 ]]; then
+      help
+  fi
+
+  # Main loop to process other options
+  while [[ "$#" -gt 0 ]]; do
+      case $1 in
+      "-l" | "--list") 
+          option="list"
+          ;;
+      "-r" | "--random") 
+          option="random"
+          ;;
+      "-n" | "--name")
+          option="name"
+          if [[ -n "$2" ]]; then
+              specific_pokemon_name="$2"
+              shift
+          else
+              echo "Error: Pokemon name not provided."
+          fi
+          ;;
+      "-s" | "--size")
+          if [[ -n "$2" ]]; then
+              size="$2"
+              shift
+          else
+              echo "Error: Image size not provided. (Format: WxH)"
+          fi
+          ;;
+      "--no-name") 
+          no_name=1
+          ;;
+      "-h" | "--help")
+          help
+          ;;
+      *) 
+          echo "Error: Unknown option $1" 
+          exit
+          ;;
+      esac
+      shift
+  done
+
+  # Check the option value and execute corresponding functions
+  if [[ "$option" == "list" ]]; then
+      list_all_pokemon_names
+  elif [[ "$option" == "random" ]]; then
+      display_random_pokemon
+  elif [[ "$option" == "name" ]]; then
+      display_specific_pokemon "$specific_pokemon_name"
+  fi
+fi
